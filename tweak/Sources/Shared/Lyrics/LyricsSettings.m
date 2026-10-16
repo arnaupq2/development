@@ -4,7 +4,6 @@
 #import "Lyrics.h"
 #import "Shared/LocalFiles/LocalLyrics.h"
 #import "Shared/LockScreenLyrics/LockScreenLyrics.h"
-#import "Shared/AnimatedArtwork/AnimatedArtwork.h"
 #import "Shared/LyricsSources/LyricsSources.h"
 
 SGModSection *SGLyricsSourcesSection(BOOL namingSource) {
@@ -35,11 +34,7 @@ SGModSection *SGLyricsSourcesSection(BOOL namingSource) {
 }
 
 SGModRow *SGLockScreenLyricsRow(void) {
-    SGModRow *row = SGSwitchRow(@"Lock screen lyrics", @"Current line in place of the artist", SGKeyLockScreenLyrics);
-    row.changed = ^(BOOL on) {
-        if (on && SGEnabled(SGKeyLockScreenExclusiveLyrics)) SGLockScreenCanvasLyricsSetEnabled(NO);
-    };
-    return row;
+    return SGSwitchRow(@"Lock screen lyrics", @"Current line in place of the artist", SGKeyLockScreenLyrics);
 }
 
 SGModRow *SGLyricsTranslationLanguageRow(void) {

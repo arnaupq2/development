@@ -372,7 +372,6 @@ typedef NS_ENUM(NSInteger, SGAddTabSection) {
     void (^_add)(NSDictionary *tab);
     void (^_remove)(void);   // set while editing a tab, which the sheet then offers to remove
     UITextField *_name;
-    BOOL _editing, _allowsLinkEditing;
 }
 
 // The same sheet over a tab already on the bar: its name, link and icon filled in, Save in place of Add.
@@ -385,22 +384,7 @@ typedef NS_ENUM(NSInteger, SGAddTabSection) {
     _draft.symbols = [tab[SGTabIconSet] isEqual:SGTabIconSetSymbols];
     // A link picked from the presets now leaves the name and the icon the tab has.
     _draft.iconChosen = YES;
-    _editing = YES;
-    _allowsLinkEditing = YES;
     _remove = [remove copy];
-    return self;
-}
-
-- (instancetype)initWithAppearanceTab:(NSDictionary *)tab save:(void (^)(NSDictionary *tab))save {
-    if (!(self = [self initWithPresets:@[] add:save])) return nil;
-    self.title = @"Tab Appearance";
-    _draft.title = tab[SGTabTitle];
-    _draft.uri = tab[SGTabURI];
-    _draft.icon = tab[SGTabIcon] ?: @"star";
-    _draft.symbols = [tab[SGTabIconSet] isEqual:SGTabIconSetSymbols];
-    _draft.iconChosen = YES;
-    _editing = YES;
-    _allowsLinkEditing = NO;
     return self;
 }
 
@@ -409,7 +393,6 @@ typedef NS_ENUM(NSInteger, SGAddTabSection) {
     self.title = @"Add a Tab";
     _draft = [SGTabDraft new];
     _draft.icon = @"star";
-    _allowsLinkEditing = YES;
     _add = [add copy];
     NSMutableArray<NSDictionary *> *kept = [NSMutableArray array];
     for (NSDictionary *tab in presets) {
@@ -422,7 +405,7 @@ typedef NS_ENUM(NSInteger, SGAddTabSection) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(cancel)];
-    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:_editing ? @"Save" : @"Add" style:UIBarButtonItemStyleDone target:self action:@selector(addTab)];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:_remove ? @"Save" : @"Add" style:UIBarButtonItemStyleDone target:self action:@selector(addTab)];
     self.tableView.keyboardDismissMode = UIScrollViewKeyboardDismissModeInteractive;
 
     _name = [UITextField new];
@@ -474,7 +457,7 @@ typedef NS_ENUM(NSInteger, SGAddTabSection) {
 }
 
 - (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section {
-    return section == SGAddTabSectionCustomize ? (_allowsLinkEditing ? 2 : 1) : 1;
+    return section == SGAddTabSectionCustomize ? 2 : 1;
 }
 
 - (UIView *)tableView:(UITableView *)table viewForHeaderInSection:(NSInteger)section {
@@ -515,7 +498,7 @@ typedef NS_ENUM(NSInteger, SGAddTabSection) {
         return cell;
     }
     UITableViewCell *cell = SGDequeueCell(table, @"customize");
-    if (_allowsLinkEditing && path.row == 0) {
+    if (path.row == 0) {
         SGFillCell(cell, @"Link", _draft.uri ?: @"Choose a page or paste a link", nil, @"link");
         cell.accessoryView = SGSymbolView(@"chevron.right", 13, UIImageSymbolWeightSemibold, 16);
     } else {
@@ -537,8 +520,8 @@ typedef NS_ENUM(NSInteger, SGAddTabSection) {
         return;
     }
     [_name resignFirstResponder];
-    UIViewController *page = _allowsLinkEditing && path.row == 0 ? [[SGTabLinkPage alloc] initWithDraft:_draft presets:_presets]
-                                                                  : [[SGTabIconPage alloc] initWithDraft:_draft];
+    UIViewController *page = path.row == 0 ? [[SGTabLinkPage alloc] initWithDraft:_draft presets:_presets]
+                                           : [[SGTabIconPage alloc] initWithDraft:_draft];
     [self.navigationController pushViewController:page animated:YES];
 }
 
@@ -584,8 +567,4 @@ void SGPresentAddTabSheet(UIViewController *owner, NSArray<NSDictionary *> *pres
 void SGPresentEditTabSheet(UIViewController *owner, NSArray<NSDictionary *> *presets, NSDictionary *tab,
                            void (^save)(NSDictionary *tab), void (^remove)(void)) {
     presentSheet(owner, [[SGAddTabPage alloc] initWithTab:tab presets:presets save:save remove:remove]);
-}
-
-void SGPresentEditTabAppearanceSheet(UIViewController *owner, NSDictionary *tab, void (^save)(NSDictionary *tab)) {
-    presentSheet(owner, [[SGAddTabPage alloc] initWithAppearanceTab:tab save:save]);
 }

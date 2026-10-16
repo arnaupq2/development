@@ -62,9 +62,6 @@ static id enumFor(NSString *key, id orig) {
 
 %ctor {
     seedFlagDefaultsOnce();
-    SGRegisterFlagForcer(NO, ^id(NSString *key) {
-        return [key isEqualToString:@"floating_music_videos_unit_enabled"] ? @NO : nil;
-    }, nil);
     %init;
     SGRequireClasses(@[
         @"_TtC22RemoteConfigurationSDK25ConfigurationProviderImpl",

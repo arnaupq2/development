@@ -5,7 +5,6 @@
 #import "Settings/SGPageStyle.h"
 #import "AnimatedArtwork.h"
 #import "Shared/LockScreenArtwork/LockScreenArtwork.h"
-#import "Shared/LockScreenLyrics/LockScreenLyrics.h"
 
 SGLockArtwork SGLockScreenArtwork(void) {
     if (@available(iOS 26.0, *)) {
@@ -19,7 +18,7 @@ SGLockArtwork SGLockScreenArtwork(void) {
                 SGSetInt(SGKeyFullScreenArtwork, SGFlag(SGKeyLegacyLockScreenArtwork, YES)
                          ? SGLockArtworkMotion : SGLockArtworkOff);
             }
-            if (![store objectForKey:SGKeyMotionSources] && [store objectForKey:SGKeyLockScreenArtworkSources]) {
+            if (![store objectForKey:SGKeyMotionSources]) {
                 NSArray<NSString *> *legacy = SGArtworkOrder();
                 if (legacy.count) [store setObject:legacy forKey:SGKeyMotionSources];
             }
@@ -30,20 +29,11 @@ SGLockArtwork SGLockScreenArtwork(void) {
 }
 
 BOOL SGLockScreenCanvasLyricsEnabled(void) {
-    BOOL canvas = SGHidden(SGKeyLockScreenCanvasLyrics);
-    if (canvas && SGFlag(SGKeyLockScreenLyrics, NO) && SGEnabled(SGKeyLockScreenExclusiveLyrics)) {
-        SGSetEnabled(SGKeyLockScreenLyrics, NO);
-    }
-    return canvas;
-}
-
-CGFloat SGLockScreenCoverArtworkScale(void) {
-    return (CGFloat)SGInt(SGKeyLockScreenCoverArtworkScale, 50) / 100.0;
+    return SGHidden(SGKeyLockScreenCanvasLyrics);
 }
 
 void SGLockScreenCanvasLyricsSetEnabled(BOOL enabled) {
     SGSetEnabled(SGKeyLockScreenCanvasLyrics, enabled);
-    if (enabled && SGEnabled(SGKeyLockScreenExclusiveLyrics)) SGSetEnabled(SGKeyLockScreenLyrics, NO);
 }
 
 NSArray *SGLockScreenMotionRows(void) {
@@ -54,23 +44,10 @@ NSArray *SGLockScreenMotionRows(void) {
         style.visible = ^BOOL { return SGLockScreenArtwork() == SGLockArtworkLyrics; };
         SGModRow *canvasLyrics = SGOptionRow(@"Canvas lyrics", @"Show synced lines over the moving artwork",
                                              SGKeyLockScreenCanvasLyrics);
-        canvasLyrics.changed = ^(BOOL on) { SGLockScreenCanvasLyricsSetEnabled(on); };
-        SGModRow *exclusiveLyrics = SGSwitchRow(@"Automatically switch lyric styles",
-            @"Turn off artist-name lyrics when Canvas lyrics turn on, and vice versa", SGKeyLockScreenExclusiveLyrics);
-        exclusiveLyrics.changed = ^(BOOL on) {
-            if (on) (void)SGLockScreenCanvasLyricsEnabled();
-        };
         SGModRow *star = SGOptionRow(@"Switch with the star", @"Use the lock-screen favorite star to toggle Canvas lyrics",
                                      SGKeyLockScreenStar);
         SGModRow *lowData = SGOptionRow(@"Download in Low Data Mode", @"Moving artwork, up to about 7 MB a song", SGKeyMotionLowData);
         lowData.visible = ^BOOL { return SGLockArtworkHasMotion(SGLockScreenArtwork()); };
-        SGModRow *coverSize = SGSliderRow(@"Fallback album art size",
-            @"Every song's blurred fallback when no moving artwork or lyrics clip is available",
-            0.25, 0.85, 0.05,
-            ^double { return SGLockScreenCoverArtworkScale(); },
-            ^(double value) { SGSetInt(SGKeyLockScreenCoverArtworkScale, (NSInteger)lround(value * 100)); },
-            ^NSString *(double value) { return [NSString stringWithFormat:@"%.0f%%", value * 100]; });
-        coverSize.visible = ^BOOL { return SGLockScreenArtwork() == SGLockArtworkEverySong; };
         SGModRow *sources = SGMotionSourcesRow();
         sources.visible = lowData.visible;
         return @[
@@ -79,11 +56,9 @@ NSArray *SGLockScreenMotionRows(void) {
                         SGKeyFullScreenArtwork, @[@"Off", @"Moving artwork", @"Lyrics", @"Every song"], SGLockArtworkOff),
             style,
             canvasLyrics,
-            exclusiveLyrics,
             star,
             sources,
             lowData,
-            coverSize,
         ];
     }
     return @[SGLockScreenArtworkNeedsRow()];

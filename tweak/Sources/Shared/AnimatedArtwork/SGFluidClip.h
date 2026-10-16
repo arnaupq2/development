@@ -8,7 +8,6 @@
 #import <Foundation/Foundation.h>
 
 // The clip's first frame, for the lock screen's preview image. `size` is SGLyricsClipSize's.
-// `coverScale` is the album cover's side as a share of the clip width.
-CGImageRef SGFluidClipFrame(CGImageRef cover, CGSize size, CGFloat coverScale) CF_RETURNS_RETAINED;
+CGImageRef SGFluidClipFrame(CGImageRef cover, CGSize size) CF_RETURNS_RETAINED;
 // Writes the loop as H.264 to `file`, replacing it, and returns once it is written; NO if it was not.
-BOOL SGFluidClipWrite(NSURL *file, CGImageRef cover, CGSize size, CGFloat coverScale);
+BOOL SGFluidClipWrite(NSURL *file, CGImageRef cover, CGSize size);

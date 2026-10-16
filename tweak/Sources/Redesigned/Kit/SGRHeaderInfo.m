@@ -9,7 +9,8 @@ const CGFloat SGRHeaderInfoTitleRise = 56;
 
 // The text kSide in from the edges; Play at least kPlayWidth wide, the Music app's; the gaps between.
 static const CGFloat kSide = 20, kPlayWidth = 148, kRowSpacing = 16, kRowAbove = 16, kAboutAbove = 14;
-static const CGFloat kLogoWidthShare = 0.8, kLogoMaxHeight = 64;
+// The card under the row: the gap above it and the widest it goes.
+static const CGFloat kCardAbove = 20, kCardMaxWidth = 440;
 
 static UILabel *infoLabel(UIView *parent, UIFont *font, UIColor *color, NSInteger lines, NSTextAlignment alignment) {
     UILabel *label = [UILabel new];
@@ -32,11 +33,10 @@ static BOOL setText(UILabel *label, NSString *text) {
 
 @implementation SGRHeaderInfo {
     UILabel *_title, *_creator, *_length, *_about;
-    UIImageView *_logo;
-    UIImage *_titleImage;
     SGRMirrorButton *_shuffle, *_trailing;
     SGRPlayCapsule *_play;
     __weak UIView *_creatorLink;
+    UIView *_card;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame {
@@ -79,54 +79,6 @@ static BOOL setText(UILabel *label, NSString *text) {
     changed |= setText(_about, about);
     if (changed) [self setNeedsLayout];
     return changed;
-}
-
-- (void)showTitleImage:(UIImage *)image {
-    if (_titleImage == image) return;
-    if (!_logo) {
-        _logo = [UIImageView new];
-        _logo.contentMode = UIViewContentModeScaleAspectFit;
-        _logo.isAccessibilityElement = YES;
-        _logo.accessibilityTraits = UIAccessibilityTraitHeader;
-        _logo.alpha = 0;
-        [self addSubview:_logo];
-    }
-    _titleImage = image;
-    _title.accessibilityElementsHidden = image != nil;
-    if (image) {
-        if (!_logo.image) [UIView performWithoutAnimation:^{ self->_logo.frame = self->_title.frame; }];
-        _logo.image = image;
-        _logo.hidden = NO;
-    }
-    [self setNeedsLayout];
-    void (^fade)(void) = ^{
-        self->_logo.alpha = image ? 1 : 0;
-        self->_title.alpha = image ? 0 : 1;
-    };
-    void (^faded)(BOOL) = ^(BOOL finished) {
-        if (self->_titleImage) return;
-        self->_logo.image = nil;
-        self->_logo.hidden = YES;
-    };
-    if (!self.window) {
-        fade();
-        faded(YES);
-        return;
-    }
-    SGRAnimate(SGRMotionFade, fade, faded);
-    SGRAnimateLayout(self, ^{ [self layoutIfNeeded]; }, nil);
-}
-
-- (CGFloat)sgr_gapAfter:(UILabel *)label {
-    return label == _title && _titleImage ? 8 : (label == _creator ? 4 : 2);
-}
-
-- (CGSize)sgr_sizeOf:(UILabel *)label width:(CGFloat)text {
-    if (label != _title || !_titleImage) return [label sizeThatFits:CGSizeMake(text, CGFLOAT_MAX)];
-    CGSize image = _titleImage.size;
-    if (image.width <= 0 || image.height <= 0) return CGSizeZero;
-    CGFloat scale = MIN(text * kLogoWidthShare / image.width, kLogoMaxHeight / image.height);
-    return CGSizeMake(round(image.width * scale), round(image.height * scale));
 }
 
 - (void)showCreatorLink:(UIView *)control {
@@ -189,13 +141,37 @@ static BOOL setText(UILabel *label, NSString *text) {
     if (_trailing.source) [_trailing feedFrom:_trailing.source];
 }
 
+- (void)showCard:(UIView *)card {
+    if (_card == card) return;
+    [_card removeFromSuperview];
+    _card = card;
+    if (card) {
+        [self addSubview:card];
+        if (self.window) {
+            card.alpha = 0;
+            SGRAnimate(SGRMotionFade, ^{ card.alpha = 1; }, nil);
+        }
+    }
+    [self setNeedsLayout];
+}
+
+- (CGFloat)cardWidthForWidth:(CGFloat)width {
+    return MIN(MAX(0, width - 2 * kSide), kCardMaxWidth);
+}
+
+// The card with the gap above it, or 0 with none.
+- (CGFloat)cardBlockForWidth:(CGFloat)width {
+    if (!_card) return 0;
+    return kCardAbove + ceil([_card sizeThatFits:CGSizeMake([self cardWidthForWidth:width], CGFLOAT_MAX)].height);
+}
+
 - (CGFloat)contentHeightForWidth:(CGFloat)width {
     CGFloat text = MAX(0, width - 2 * kSide), height = 0;
     UILabel *previous = nil;
     for (UILabel *label in @[_title, _creator, _length]) {
         if (label.hidden) continue;
-        if (previous) height += [self sgr_gapAfter:previous];
-        height += ceil([self sgr_sizeOf:label width:text].height);
+        if (previous) height += previous == _creator ? 4 : 2;
+        height += ceil([label sizeThatFits:CGSizeMake(text, CGFLOAT_MAX)].height);
         previous = label;
     }
     if (previous) height += kRowAbove;
@@ -207,19 +183,14 @@ static BOOL setText(UILabel *label, NSString *text) {
 - (void)layoutSubviews {
     [super layoutSubviews];
     CGFloat width = self.bounds.size.width, text = MAX(0, width - 2 * kSide);
-    CGFloat y = round(self.bounds.size.height - SGRHeaderInfoBottom - [self contentHeightForWidth:width]);
+    CGFloat y = round(self.bounds.size.height - SGRHeaderInfoBottom - [self contentHeightForWidth:width] - [self cardBlockForWidth:width]);
 
     UILabel *previous = nil;
     for (UILabel *label in @[_title, _creator, _length]) {
         if (label.hidden) continue;
-        if (previous) y += [self sgr_gapAfter:previous];
-        CGSize size = [self sgr_sizeOf:label width:text];
-        CGFloat height = ceil(size.height);
+        if (previous) y += previous == _creator ? 4 : 2;
+        CGFloat height = ceil([label sizeThatFits:CGSizeMake(text, CGFLOAT_MAX)].height);
         label.frame = CGRectMake(kSide, y, text, height);
-        if (label == _title && _titleImage) {
-            _logo.frame = CGRectMake(round((width - size.width) / 2), y, size.width, height);
-            _logo.accessibilityLabel = _title.text;
-        }
         y += height;
         previous = label;
     }
@@ -232,6 +203,14 @@ static BOOL setText(UILabel *label, NSString *text) {
     _shuffle.frame = CGRectMake(CGRectGetMinX(play) - kRowSpacing - side, y, side, side);
     _trailing.frame = CGRectMake(CGRectGetMaxX(play) + kRowSpacing, y, side, side);
     y += side;
+
+    if (_card) {
+        CGFloat cardWidth = [self cardWidthForWidth:width];
+        CGFloat cardHeight = ceil([_card sizeThatFits:CGSizeMake(cardWidth, CGFLOAT_MAX)].height);
+        y += kCardAbove;
+        _card.frame = CGRectMake(round((width - cardWidth) / 2), y, cardWidth, cardHeight);
+        y += cardHeight;
+    }
 
     if (!_about.hidden) {
         y += kAboutAbove;

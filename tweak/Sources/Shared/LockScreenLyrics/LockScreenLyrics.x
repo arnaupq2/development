@@ -7,7 +7,6 @@
 #import <MediaPlayer/MediaPlayer.h>
 #import "Core/SGCore.h"
 #import "LockScreenLyrics.h"
-#import "Shared/AnimatedArtwork/AnimatedArtwork.h"
 #import "Shared/Lyrics/Lyrics.h"
 #import "Headers/SPTPlayer.h"
 
@@ -178,12 +177,7 @@ static void refreshArtistLyrics(void) {
 }
 
 static BOOL artistLyricsOn(void) {
-    BOOL enabled = SGFlag(SGKeyLockScreenLyrics, NO);
-    if (enabled && SGLockScreenCanvasLyricsEnabled() && SGEnabled(SGKeyLockScreenExclusiveLyrics)) {
-        SGSetEnabled(SGKeyLockScreenLyrics, NO);
-        return NO;
-    }
-    return enabled;
+    return SGFlag(SGKeyLockScreenLyrics, NO);
 }
 
 %hook MPNowPlayingInfoCenter

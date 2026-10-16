@@ -43,37 +43,11 @@ SGRArtworkField *SGRPlayerField(void) {
 
 SGRPlayerBackgroundKind SGRPlayerBackground(void) {
     NSInteger kind = SGInt(SGRKeyPlayerBackground, SGEnabled(SGRKeyPlayerMotion) ? SGRPlayerBackgroundColours : SGRPlayerBackgroundStill);
-    return kind >= SGRPlayerBackgroundStill && kind <= SGRPlayerBackgroundFill ? kind : SGRPlayerBackgroundColours;
-}
-
-SGRPlayerBackgroundKind SGRPlayerAnimatedFallback(void) {
-    static const SGRPlayerBackgroundKind choices[] = {
-        SGRPlayerBackgroundStill,
-        SGRPlayerBackgroundColours,
-        SGRPlayerBackgroundFluid,
-        SGRPlayerBackgroundVisualiser,
-        SGRPlayerBackgroundFill,
-    };
-    NSInteger index = SGInt(SGRKeyPlayerAnimatedFallback, (NSInteger)(sizeof choices / sizeof *choices) - 1);
-    if (index < 0 || index >= (NSInteger)(sizeof choices / sizeof *choices)) index = (NSInteger)(sizeof choices / sizeof *choices) - 1;
-    return choices[index];
+    return kind >= SGRPlayerBackgroundStill && kind <= SGRPlayerBackgroundVisualiser ? kind : SGRPlayerBackgroundColours;
 }
 
 NSArray<NSString *> *SGRPlayerBackgroundNames(void) {
-    return @[@"Still", @"Colors", @"Fluid", @"Animated", @"Visualiser", @"Fill"];
-}
-
-void SGRPlayerApplyBackgroundToField(SGRArtworkField *field, SGRPlayerBackgroundKind kind) {
-    if (!field) return;
-    if (kind == SGRPlayerBackgroundAnimated) kind = SGRPlayerAnimatedFallback();
-    BOOL fluid = kind == SGRPlayerBackgroundFluid
-        || kind == SGRPlayerBackgroundVisualiser;
-    field.flows = kind == SGRPlayerBackgroundColours;
-    field.fluid = fluid;
-    field.fills = kind == SGRPlayerBackgroundFill;
-    field.backdropOpacity = SGInt(SGRKeyPlayerBackdropOpacity, 100) / 100.0;
-    field.fillOpacity = SGInt(SGRKeyPlayerFillOpacity, 100) / 100.0;
-    field.fluidOpacity = SGInt(SGRKeyPlayerFluidOpacity, 100) / 100.0;
+    return @[@"Still", @"Colors", @"Fluid", @"Animated", @"Visualiser"];
 }
 
 // A paused song holds the colors still, the way it rests the cover (PlayerArtwork.x), and so does what lies over
@@ -122,7 +96,8 @@ static SGRArtworkField *fieldIn(UIView *plane) {
     field = [[SGRArtworkField alloc] initWithFrame:plane.bounds];
     field.showsBackdrop = YES;
     SGRPlayerBackgroundKind background = SGRPlayerBackground();
-    SGRPlayerApplyBackgroundToField(field, background);
+    field.flows = background == SGRPlayerBackgroundColours;
+    field.fluid = background >= SGRPlayerBackgroundFluid;
     field.motionHeld = fieldHeld();
     field.bleed = kBleed;
     objc_setAssociatedObject(plane, &kFieldKey, field, OBJC_ASSOCIATION_RETAIN_NONATOMIC);

@@ -28,4 +28,4 @@ sg-audio:
 	@$(MAKE) --no-print-directory -C $(SG_AUDIO) PLATFORM=ios
 
 before-all::
-	@bash ../scripts/check-layers.sh Sources
+	@if [ -x ../scripts/check-layers.sh ]; then ../scripts/check-layers.sh Sources; fi
