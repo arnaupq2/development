@@ -26,4 +26,4 @@ session:  ## record clean trees screen by screen into trees/clean/, Enter per sn
 log:     ## stream the tweak's log lines from the phone
 	./scripts/dump-log.sh
 flags:    ## regenerate tweak/Sources/Shared/Flags/SGFlagList.m, Spotify's remote-config flags, from the IPA
-	./scripts/extract-flags.py $(IPA)
+	python3 ./scripts/extract-flags.py $(IPA)
